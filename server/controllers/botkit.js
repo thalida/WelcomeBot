@@ -111,7 +111,7 @@ controller.on(['channel_joined', 'user_channel_join', 'user_group_join'], functi
     });
 });
 
-controller.on('slash_command',function(bot,message) {
+controller.on('welcome',function(bot,message) {
   bot.replyPublic(message,'<@' + message.user + '> is cool!');
   bot.replyPrivate(message,'*nudge nudge wink wink*');
 });
