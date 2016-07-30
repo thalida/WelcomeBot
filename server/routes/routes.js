@@ -36,6 +36,8 @@ module.exports = function(app) {
     var auth_adresse = 'https://slack.com/api/oauth.access?'
     auth_adresse += 'client_id=' + process.env.SLACK_ID
     auth_adresse += '&client_secret=' + process.env.SLACK_SECRET
+    auth_adresse += '&client_secret=' + process.env.SLACK_SECRET
+    auth_adresse += '&verification_token=' + process.env.SLACK_VERIFICATION_TOKEN
     auth_adresse += '&code=' + auth_code
     auth_adresse += '&redirect_uri=' + process.env.SLACK_REDIRECT + "new"
 
