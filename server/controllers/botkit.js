@@ -94,7 +94,7 @@ controller.hears('^stop','direct_message',function(bot,message) {
   bot.rtm.close();
 });
 
-controller.on('direct_message,mention,direct_mention',function(bot,message) {
+controller.on(['direct_message', 'mention', 'direct_mention'],function(bot,message) {
   bot.api.reactions.add({
     timestamp: message.ts,
     channel: message.channel,
@@ -105,8 +105,18 @@ controller.on('direct_message,mention,direct_mention',function(bot,message) {
   });
 });
 
-controller.storage.teams.all(function(err,teams) {
+controller.on(['channel_joined', 'user_channel_join', 'user_group_join'], function(bot, message){
+    bot.reply(message, {
+        text: '<@' + message.user + '> Welcome to this channel!'
+    });
+});
 
+controller.on('slash_command',function(bot,message) {
+  bot.replyPublic(message,'<@' + message.user + '> is cool!');
+  bot.replyPrivate(message,'*nudge nudge wink wink*');
+});
+
+controller.storage.teams.all(function(err,teams) {
   console.log(teams)
 
   if (err) {

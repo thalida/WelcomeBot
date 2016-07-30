@@ -7,10 +7,10 @@ module.exports = function(app) {
   //public pages=============================================
   //root
   app.get('/', function(req, res) {
-    console.log('res ' , res);
-    console.log("root")
+    console.log("index")
 
-    // res.render('root'); // load view/root.html file
+    res.render('index');
+    // res.sendFile('index.html');
   });
 
   //new user creation - redirection from Slack
