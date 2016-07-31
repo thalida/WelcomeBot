@@ -1,9 +1,8 @@
 // modules =================================================
 var express        = require('express');
-var app            = express();
 var bodyParser     = require('body-parser');
-var http           = require('http').Server(app);
 var dotenv         = require('dotenv');
+var q              = require('q');
 
 // configuration ===========================================
 
@@ -12,31 +11,32 @@ var dotenv         = require('dotenv');
 //heroku environment in production, etc...
 dotenv.load();
 
-// public folder for images, css,...
-app.use(express.static(__dirname + '/public'));
-app.set('views', __dirname + '/public/views');
-// app.use(express.static(__dirname + '/public/views'));
+//slackbot
+var slackbot = require('./server/controllers/slackbot');
+var routes = require('./server/routes/routes');
 
-//parsing
-app.use(bodyParser.json()); // for parsing application/json
-app.use(bodyParser.urlencoded({ extended: true })); //for parsing url encoded
+slackbot
+    .connect()
+    .then(function( webserver ){
+        webserver.use(express.static(__dirname + '/public'));
+        webserver.use(express.static(__dirname + '/public/views'));
 
-app.set('view engine', 'ejs');
+        //port for Heroku
+        webserver.set('port', (process.env.PORT));
 
-// routes
-require('./server/routes/routes')(app);
+        // routes
+        routes( webserver );
 
-// apis
-app.use('/api/v1', require('./server/controllers/api/v1/index.js'));
+        slackbot.controller.createWebhookEndpoints(webserver);
+        slackbot.controller.createOauthEndpoints(webserver, function (err, req, res) {
+            if (err) {
+                res.status(500).send('ERROR: ' + err);
+            } else {
+                res.send('Success!');
+            }
+        });
+    })
+    .catch(function(){
 
-//port for Heroku
-app.set('port', (process.env.PORT));
-
-//botkit (apres port)
-require('./server/controllers/botkit')
-
-//START ===================================================
-http.listen(app.get('port'), function(){
-  console.log('listening on port ' + app.get('port'));
-});
+    });
 
