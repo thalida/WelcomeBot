@@ -53,18 +53,24 @@ var welcomeCommand = {
 
             return errorMessage;
         },
-        getMessageSuccess: function( res ){
-            return {
-                attachments: [{
-                    title: res.file.title,
-                    title_link: res.file.permalink,
-                    text: res.content || res.content_html,
-                    color: '#000000',
-                    unfurl_links: false,
-                    unfurl_media: false,
-                    mrkdwn_in: ["pretext", "text", "fields"]
-                }]
+        getMessageSuccess: function( res, author ){
+            var message = {
+                title: res.file.title,
+                title_link: res.file.permalink,
+                text: res.content || res.content_html,
+                footer: 'WelcomeBot',
+                color: '#000000',
+                unfurl_links: false,
+                unfurl_media: false,
+                mrkdwn_in: ["pretext", "text", "fields"]
             };
+
+            if( author ){
+                message.author_name = author.real_name + ' (@' + author.name + ')';
+                message.author_icon = author.profile.image_48;
+            }
+
+            return { attachments: [ message ] };
         },
         getCreatePrivateSuccess: function(){
             return "Awesome! I'll let to the team know about the updates!";
@@ -73,12 +79,14 @@ var welcomeCommand = {
             return {
                 attachments: [
                     {
-                        pretext: '<@' + message.user + '> updated the welcome message! \n_Type `/welcome` to see the full message._\n',
+                        pretext: [
+                            '<@' + message.user + '> updated the welcome message!',
+                            '_Type `/welcome` to see the full message._\n'
+                        ].join('\n'),
                         fields: [
                             {
                                 title: 'Snippet',
-                                value: res.file.preview.trim() + '...',
-                                short: true
+                                value: res.file.preview.trim() + '...'
                             }
                         ],
                         unfurl_links: false,
@@ -89,8 +97,26 @@ var welcomeCommand = {
                 ]
             };
         },
-        getMessageEditSuccess: function( res ){
-            return 'Edit the welcome file at: \n' + res.file.edit_link
+        getMessageEditSuccess: function( res, author ){
+            var message = {
+                title: 'Edit Welcome Message',
+                text: [
+                    'Use the following link to update the message:',
+                    res.file.edit_link
+                ].join('\n'),
+                footer: 'WelcomeBot',
+                color: 'good',
+                unfurl_links: false,
+                unfurl_media: false,
+                mrkdwn_in: ["pretext", "text", "fields"]
+            };
+
+            if( author ){
+                message.author_name = author.real_name + ' (@' + author.name + ')';
+                message.author_icon = author.profile.image_48;
+            }
+
+            return { attachments: [ message ] };
         },
         getMessageRemoveSuccess: function( res ){
             return "You've removed the welcome message!"
@@ -177,18 +203,21 @@ var welcomeCommand = {
         var self = this;
 
         controller.storage.channels.get(message.channel, function(err, channel) {
-            if (!channel || !channel.welcomeFileId ) {
+            if (!channel || !channel.welcomeFile || !channel.welcomeFile.fileId ) {
                 bot.replyPublic(message, self.messages.getNoMessageError());
                 return;
             }
 
-            bot.api.files.info({file: channel.welcomeFileId}, function(err, res){
+            bot.api.files.info({file: channel.welcomeFile.fileId}, function(err, fileRes){
                 if( err ){
                     bot.replyPublic(message, self.messages.getNoFileError());
                     return;
                 }
 
-                bot.replyPrivate(message, self.messages.getMessageSuccess( res ));
+                bot.api.users.info({user: channel.welcomeFile.createdBy}, function( err, userRes ){
+                    var user = ( err ) ? null : userRes.user;
+                    bot.replyPrivate(message, self.messages.getMessageSuccess( fileRes, user ));
+                });
             });
         });
     },
@@ -208,22 +237,28 @@ var welcomeCommand = {
             if( !channel ){
                 channel = {
                     id: message.channel,
-                    welcomeFileId: null
+                    welcomeFile: {
+                        id: null,
+                        createdBy: null
+                    }
                 }
             }
 
-            if( channel.welcomeFileId ){
-                bot.api.files.delete({file: channel.welcomeFileId});
+            if( channel.welcomeFile.fileId ){
+                bot.api.files.delete({file: channel.welcomeFile.fileId});
             }
 
             bot.api.files.upload(params, function(err, res){
                 if( err ){
-                    channel.welcomeFileId = null;
+                    channel.welcomeFile = null;
                     bot.replyPublic(message, self.messages.getErrorMessage());
                     return;
                 }
 
-                channel.welcomeFileId = res.file.id;
+                channel.welcomeFile = {
+                    fileId: res.file.id,
+                    createdBy: message.user
+                };
 
                 bot.replyPrivate(message, self.messages.getCreatePrivateSuccess());
                 bot.reply(message, self.messages.getCreatePublicSuccess( res, message ));
@@ -248,11 +283,17 @@ var welcomeCommand = {
                 if( !channel ){
                     channel = {
                         id: message.channel,
-                        welcomeFileId: null
+                        welcomeFile: {
+                            fileId: null,
+                            createdBy: null
+                        }
                     }
                 }
 
-                channel.welcomeFileId = fileId;
+                channel.welcomeFile = {
+                    fileId: fileId,
+                    createdBy: message.user
+                };
 
                 bot.replyPrivate(message, self.messages.getCreatePrivateSuccess());
                 bot.reply(message, self.messages.getCreatePublicSuccess( res, message ));
@@ -265,16 +306,19 @@ var welcomeCommand = {
         var self = this;
 
         controller.storage.channels.get(message.channel, function(err, channel) {
-            if (!channel || !channel.welcomeFileId ) {
+            if (!channel || !channel.welcomeFile || !channel.welcomeFile.fileId ) {
                 bot.replyPublic(message, self.messages.getNoMessageError());
                 return;
             }
 
-            bot.api.files.info({file: channel.welcomeFileId}, function(err, res){
+            bot.api.files.info({file: channel.welcomeFile.fileId}, function(err, fileRes){
                 if( err ){
                     bot.replyPublic(message, self.messages.getNoFileError());
                 } else {
-                    bot.replyPrivate(message, self.messages.getMessageEditSuccess( res ));
+                    bot.api.users.info({user: channel.welcomeFile.createdBy}, function( err, userRes ){
+                        var user = ( err ) ? null : userRes.user;
+                        bot.replyPrivate(message, self.messages.getMessageEditSuccess( fileRes, user ));
+                    });
                 }
             });
         });
@@ -283,12 +327,12 @@ var welcomeCommand = {
         var self = this;
 
         controller.storage.channels.get(message.channel, function(err, channel) {
-            if( !channel ){
+            if( !channel || !channel.welcomeFile ){
                 bot.replyPublic(message, self.messages.getNoMessageError());
                 return;
             }
 
-            var fileId = channel.welcomeFileId;
+            var fileId = channel.welcomeFile.fileId;
 
             if( args.value ){
                 var url = args.value;
@@ -308,7 +352,7 @@ var welcomeCommand = {
                         return;
                     }
 
-                    channel.welcomeFileId = null;
+                    channel.welcomeFile = null;
 
                     bot.replyPublic(message, self.messages.getMessageRemoveSuccess());
 
