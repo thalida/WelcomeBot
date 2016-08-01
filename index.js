@@ -1,19 +1,16 @@
-// modules =================================================
+//  modules =================================================
 var express        = require('express');
 var bodyParser     = require('body-parser');
 var dotenv         = require('dotenv');
 var q              = require('q');
 
-// configuration ===========================================
-
-//load environment variables,
-//either from .env files (development),
-//heroku environment in production, etc...
+//  configuration ===========================================
+//  load environment variables
 dotenv.load();
 
 //slackbot
-var slackbot = require('./server/controllers/slackbot');
-var routes = require('./server/routes/routes');
+var slackbot       = require('./server/slackbot');
+var routes         = require('./server/routes/routes');
 
 slackbot
     .connect()
@@ -36,7 +33,7 @@ slackbot
             }
         });
     })
-    .catch(function(){
-
+    .catch(function( err ){
+        console.log('Error creating webserver', err)
     });
 
