@@ -9,13 +9,14 @@ var welcomeCommand = {
                         'Please try again',
                         '_Need help? Try typing: `/welcome help`_'
                     ].join('\n'),
-                    color: 'bad',
+                    color: 'danger',
                     mrkdwn_in: ["pretext", "text", "fields"]
                 }]
             };
         },
         getArgsError: function( args ){
             var errorMessage = this.getErrorMessage();
+            errorMessage.color = 'warning';
             errorMessage.attachments[0].text = [
                 "Oh dear, it seems I don't know how to `" + args.key + "`!",
                 '_Need help? Try typing: `/welcome help`_'
@@ -89,7 +90,7 @@ var welcomeCommand = {
             };
         },
         getMessageEditSuccess: function( res ){
-            return 'Edit the welcome file at:' + res.file.permalink
+            return 'Edit the welcome file at: \n' + res.file.edit_link
         },
         getMessageRemoveSuccess: function( res ){
             return "You've removed the welcome message!"
@@ -197,8 +198,10 @@ var welcomeCommand = {
         var time = new Date().getTime();
         var params = {
             filename: 'welcomebot_' + time,
+            filetype: 'text',
             title: 'Welcome!',
-            content: args.value
+            content: args.value,
+            channels: message.channel
         };
 
         controller.storage.channels.get(message.channel, function(err, channel) {
