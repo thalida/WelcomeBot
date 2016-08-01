@@ -72,9 +72,7 @@ var welcomeCommand = {
             return {
                 attachments: [
                     {
-                        title: 'New Welcome Message',
-                        pretext: '<@' + message.user + '> updated the welcome message!',
-                        text: '_Type `/welcome` to see the full message._\n\n',
+                        pretext: '<@' + message.user + '> updated the welcome message! \n_Type `/welcome` to see the full message._\n',
                         fields: [
                             {
                                 title: 'Snippet',
