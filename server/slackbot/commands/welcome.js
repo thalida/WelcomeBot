@@ -234,17 +234,18 @@ var welcomeCommand = {
         };
 
         controller.storage.channels.get(message.channel, function(err, channel) {
-            if( !channel ){
+            if( !channel || !channel.welcomeFile ){
                 channel = {
                     id: message.channel,
                     welcomeFile: {
-                        id: null,
-                        createdBy: null
+                        fileId: null,
+                        createdBy: null,
+                        triggeredByBot: true
                     }
                 }
             }
 
-            if( channel.welcomeFile.fileId ){
+            if( channel.welcomeFile.fileId && channel.welcomeFile.triggeredByBot ){
                 bot.api.files.delete({file: channel.welcomeFile.fileId});
             }
 
@@ -257,7 +258,8 @@ var welcomeCommand = {
 
                 channel.welcomeFile = {
                     fileId: res.file.id,
-                    createdBy: message.user
+                    createdBy: message.user,
+                    triggeredByBot: true
                 };
 
                 bot.replyPrivate(message, self.messages.getCreatePrivateSuccess());
@@ -285,7 +287,8 @@ var welcomeCommand = {
                         id: message.channel,
                         welcomeFile: {
                             fileId: null,
-                            createdBy: null
+                            createdBy: null,
+                            triggeredByBot: false
                         }
                     }
                 }
@@ -327,12 +330,12 @@ var welcomeCommand = {
         var self = this;
 
         controller.storage.channels.get(message.channel, function(err, channel) {
-            if( !channel || !channel.welcomeFile ){
+            if( !channel ){
                 bot.replyPublic(message, self.messages.getNoMessageError());
                 return;
             }
 
-            var fileId = channel.welcomeFile.fileId;
+            var fileId = (channel.welcomeFile) ? channel.welcomeFile.fileId : null;
 
             if( args.value ){
                 var url = args.value;
