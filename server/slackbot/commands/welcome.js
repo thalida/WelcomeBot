@@ -45,15 +45,34 @@ var welcomeCommand = {
         bot.replyPrivate(message, {
             attachments: [
                 {
-                    title: '/welcome help',
-                    text: [
-                        '*/welcome help*',
-                        '`/welcome`: Displays the currently set welcome message',
-                        '`/welcome edit`: Returns a link to edit the welcome message',
-                        '`/welcome remove link`: Removes the welcome message and file',
-                        '`/welcome set:text`: Updates the welcome message to the text ( also creates a snippet.)',
-                        '`/welcome set:file link`: Updates the welcome message to the contents of the snippet',
-                    ].join('\n'),
+                    pretext: '*/welcome help*',
+                    fields: [
+                        {
+                            "title": "/welcome",
+                            "value": "Displays the welcome message",
+                            "short": false
+                        },
+                        {
+                            "title": "/welcome edit",
+                            "value": "Returns a link to edit the welcome message",
+                            "short": false
+                        },
+                        {
+                            "title": "/welcome remove",
+                            "value": "Removes the welcome message",
+                            "short": false
+                        },
+                        {
+                            "title": "/welcome set [some text]",
+                            "value": "Sets welcome message to the text (also creates a snippet.)",
+                            "short": false
+                        },
+                        {
+                            "title": "/welcome set:file [slack file link]",
+                            "value": "Sets welcome message to the contents of the file.",
+                            "short": false
+                        }
+                    ],
                     mrkdwn_in: ["pretext", "text", "fields"]
                 }
             ]
@@ -139,15 +158,18 @@ var welcomeCommand = {
                 }
 
                 channel.welcomeFileId = res.file.id;
-                bot.replyPublic(message, {
+                bot.replyPrivate(message, "Awesome! I'll let to the team know about the updates!");
+                bot.reply(message, {
                     attachments: [
                         {
                             title: 'New Welcome Message',
-                            title_link: res.file.permalink,
+                            pretext: '<@' + message.user + '> updated the welcome message!',
+                            text: '_Type `/welcome` to see the full message._\n\n',
                             fields: [
                                 {
-                                    title: 'Title',
-                                    value: res.file.title
+                                    title: 'Snippet',
+                                    value: res.file.preview.trim() + '...',
+                                    short: true
                                 }
                             ],
                             unfurl_links: false,
@@ -225,6 +247,7 @@ var welcomeCommand = {
                             title: res.file.title,
                             title_link: res.file.permalink,
                             text: res.content,
+                            color: '#000000',
                             unfurl_links: false,
                             unfurl_media: false,
                             mrkdwn_in: ["pretext", "text", "fields"]
