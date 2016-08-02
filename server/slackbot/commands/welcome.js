@@ -73,22 +73,19 @@ var welcomeCommand = {
             return { attachments: [ message ] };
         },
         getCreatePrivateSuccess: function(){
-            return "Awesome! I'll let to the team know about the updates!";
+            return [
+                "Awesome! I'll let to the team know about the updates!",
+                '_Noticed a spelling mistake? Type `/welcome edit`_'
+            ].join('\n');
         },
         getCreatePublicSuccess: function( res, message ){
             return {
                 attachments: [
                     {
-                        pretext: [
-                            '<@' + message.user + '> updated the welcome message!',
-                            '_Type `/welcome` to see the full message._\n'
+                        title: '<@' + message.user + '> updated the welcome message!',
+                        text: [
+                            'Type `/welcome` to see the full message.'
                         ].join('\n'),
-                        fields: [
-                            {
-                                title: 'Snippet',
-                                value: res.file.preview.trim() + '...'
-                            }
-                        ],
                         unfurl_links: false,
                         unfurl_media: false,
                         mrkdwn_in: ["pretext", "text", "fields"],
@@ -224,16 +221,7 @@ var welcomeCommand = {
     setText: function( args, controller, bot, message ){
         var self = this;
 
-        var time = new Date().getTime();
-        var params = {
-            filename: 'welcomebot_' + time,
-            filetype: 'text',
-            title: 'Welcome!',
-            content: args.value,
-            channels: message.channel
-        };
-
-        controller.storage.channels.get(message.channel, function(err, channel) {
+        controller.storage.channels.get(message.channel, function(channelErr, channel) {
             if( !channel || !channel.welcomeFile ){
                 channel = {
                     id: message.channel,
@@ -245,28 +233,53 @@ var welcomeCommand = {
                 }
             }
 
-            if( channel.welcomeFile.fileId && channel.welcomeFile.triggeredByBot ){
-                bot.api.files.delete({file: channel.welcomeFile.fileId});
-            }
-
-            bot.api.files.upload(params, function(err, res){
-                if( err ){
+            controller.storage.users.get(message.user, function(userErr, user ){
+                if( userErr || !user ){
                     channel.welcomeFile = null;
                     bot.replyPublic(message, self.messages.getErrorMessage());
+
+                    controller.storage.channels.save(channel);
                     return;
                 }
 
-                channel.welcomeFile = {
-                    fileId: res.file.id,
-                    createdBy: message.user,
-                    triggeredByBot: true
-                };
+                if( channel.welcomeFile.fileId && channel.welcomeFile.triggeredByBot ){
+                    bot.api.files.delete({
+                        token: user.access_token,
+                        file: channel.welcomeFile.fileId
+                    });
+                }
 
-                bot.replyPrivate(message, self.messages.getCreatePrivateSuccess());
-                bot.reply(message, self.messages.getCreatePublicSuccess( res, message ));
+                var time = new Date().getTime();
 
-                controller.storage.channels.save(channel);
+                bot.api.files.upload({
+                    token: user.access_token,
+                    filename: 'welcomebot_' + time,
+                    filetype: 'text',
+                    title: 'Welcome!',
+                    content: args.value,
+                    channels: message.channel
+                }, function(fileErr, fileRes){
+                    if( fileErr ){
+                        channel.welcomeFile = null;
+                        bot.replyPublic(message, self.messages.getErrorMessage());
+
+                        controller.storage.channels.save(channel);
+                        return;
+                    }
+
+                    channel.welcomeFile = {
+                        fileId: fileRes.file.id,
+                        createdBy: message.user,
+                        triggeredByBot: true
+                    };
+
+                    bot.replyPrivate(message, self.messages.getCreatePrivateSuccess());
+                    bot.reply(message, self.messages.getCreatePublicSuccess( fileRes, message ));
+
+                    controller.storage.channels.save(channel);
+                });
             });
+
         });
     },
     setFile: function( args, controller, bot, message ){

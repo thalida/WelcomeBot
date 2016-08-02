@@ -15,7 +15,7 @@ var controller = Botkit.slackbot({ storage: BotkitStorage({mongoUri: mongoUri}) 
     {
         clientId: process.env.CLIENT_ID,
         clientSecret: process.env.CLIENT_SECRET,
-        scopes: ['bot', 'commands'],
+        scopes: ['bot', 'commands', 'files:write:user'],
     }
 );
 
